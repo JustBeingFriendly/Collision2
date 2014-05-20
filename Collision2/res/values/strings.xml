@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">Ground</string>
+	<string name="left_button">LButton</string>
+    <string name="right_button">RButton</string>
+    <string name="centre_button">CButton</string>
+</resources>
