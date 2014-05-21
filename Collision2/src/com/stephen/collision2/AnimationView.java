@@ -28,7 +28,7 @@ public class AnimationView extends SurfaceView implements Runnable, SurfaceHolde
 	private BitmapShader marsShade;
 	//private Paint paint = new Paint();
 	private Paint marsBackground = new Paint();
-	private int[] FeatureArray;
+	
 	
 	//Needed for spaceship
 	private Bitmap spaceShip;
@@ -64,7 +64,7 @@ public class AnimationView extends SurfaceView implements Runnable, SurfaceHolde
 		mars = BitmapFactory.decodeResource(getResources(), R.drawable.mars);
 		marsShade = (new BitmapShader(mars, Shader.TileMode.REPEAT, Shader.TileMode.REPEAT));
 		marsBackground.setShader(marsShade);
-		FeatureArray = new int[5];
+		
 		
 		
 		//Needed for spaceship
@@ -101,7 +101,7 @@ public class AnimationView extends SurfaceView implements Runnable, SurfaceHolde
 		mars = BitmapFactory.decodeResource(getResources(), R.drawable.mars);
 		marsShade = (new BitmapShader(mars, Shader.TileMode.REPEAT, Shader.TileMode.REPEAT));
 		marsBackground.setShader(marsShade);
-		FeatureArray = new int[5];
+		
 		
 		//Needed for spaceship
 		spaceShip = BitmapFactory.decodeResource(getResources(), R.drawable.craftmain);
@@ -163,7 +163,7 @@ public class AnimationView extends SurfaceView implements Runnable, SurfaceHolde
 		int gravity = 0;
 		int verticalThrust = 0;
 		
-		PsuedoRandomSort();
+		GroundGeneration();
 		
 		while (running) {
 			Canvas canvas = null;
@@ -199,11 +199,11 @@ public class AnimationView extends SurfaceView implements Runnable, SurfaceHolde
 				
 				canvas = holder.lockCanvas();
 				
-				if(crashList.size() > 0){
+				/*if(crashList.size() > 0){
 					for(Crash c : crashList){
 						canvas.drawCircle(c.getX(), c.getY(), 20, c.getPaint());
 					}
-				}
+				}*/
 				
 				canvas.drawColor(Color.BLACK); //Background Colour
 				
@@ -215,8 +215,9 @@ public class AnimationView extends SurfaceView implements Runnable, SurfaceHolde
 				}
 				
 				canvas.drawBitmap(spaceShip, shipXPos, shipYPos, null);
+				////////////////////////////////////
 				drawGround(canvas);
-				
+				////////////////////////////////////
 				if(crashList.size() > 0){
 					for(Crash c : crashList){
 						canvas.drawCircle(c.getX(), c.getY(),  (spaceShip.getWidth() *2), c.getPaint());
@@ -319,21 +320,14 @@ public class AnimationView extends SurfaceView implements Runnable, SurfaceHolde
 	
 	
 	private void drawGround(Canvas canvas){
-		float nextXstartPos = 0;
+		float nextXPos = 0;
 		//Draw baseline for ground
 		Path mainPath = new Path();		
-		mainPath.moveTo(nextXstartPos, bottomThirdScreen); //Paths starting position
-		
-/*		nextXstartPos = PyramidFeature(mainPath, nextXstartPos);
-		nextXstartPos = InversePyramidFeature(mainPath, nextXstartPos);
-		nextXstartPos = JaggedCliffFeature(mainPath, nextXstartPos);
-		nextXstartPos = TreeFeature(mainPath, nextXstartPos);		
-		nextXstartPos = landingPad(mainPath, nextXstartPos);
-		nextXstartPos = SpireFeature(mainPath, nextXstartPos);
-		nextXstartPos = TreeFeature(mainPath, nextXstartPos);*/
-		nextXstartPos = GroundAssembler(mainPath, nextXstartPos);
+		mainPath.moveTo(nextXPos, bottomThirdScreen); //Paths starting position
+		nextXPos = GroundAssembler(mainPath, "FeatureArray");
+		//nextXPos = GroundGeneration(nextXPos);
 		//Draws from far right, to bottom right, bottom left and back to start, effectively closing the shape
-		mainPath.lineTo(width, bottomThirdScreen);
+		//mainPath.lineTo(width, bottomThirdScreen);
 		mainPath.lineTo(width, height);
 		mainPath.lineTo(0, height);
 		mainPath.lineTo(0, bottomThirdScreen);
@@ -341,77 +335,110 @@ public class AnimationView extends SurfaceView implements Runnable, SurfaceHolde
 		mapped = true;
 	}
 	
-	private float GroundAssembler(Path path, float x){
+	ArrayList<Integer> intList;
+	
+	private int[]FeatureArray;
+	
+	
+	private void GroundGeneration(){
+		intList = new ArrayList<Integer>();
+		int ranNum = random.nextInt(6); //Generate number between 0 and 5
+		Path path = new Path();
+		//float nextX = 0;
+		float screenCheck = 0;
+		path.moveTo(screenCheck, bottomThirdScreen);
+		
+		intList.add(ranNum);
+		screenCheck = GroundAssembler(path, "intList");
+		boolean filled = false;
+		while(!filled){
+			
+			if(screenCheck < width){
+				
+				ranNum = random.nextInt(6);
+				intList.add(ranNum);
+				screenCheck = GroundAssembler(path, "intList");
+			}
+			else{
+				filled = true;
+			}
+
+		}
+		//Check landing pad is spawned, and if so is fully spawned on screen
+		boolean zeroFound = false;
+		boolean restart = false;
+		
+		for(int i = 0 ; i < intList.size(); i++){
+			//As long as the landing pad isn't in the last position
+			if(intList.get(i) != intList.size()){
+				
+				if(intList.get(i) == 0){
+					//Only spawn one landing pad
+					if(zeroFound){
+						restart = true;
+					}else{
+					zeroFound = true;
+					}
+				}
+			}
+		}
+		//If zero (landing pad) not spawned or restart conditions met, restart
+		if(zeroFound == false || restart == true){
+			GroundGeneration();		
+			//Otherwise generate landscape
+		}else{
+			FeatureArray = new int[intList.size()];
+			
+			for(int i = 0; i < FeatureArray.length; i++){
+				FeatureArray[i] = intList.get(i);
+			}
+		}
+		
+		
+	}
+	
+	private float GroundAssembler(Path path, String id ){
 		Path sharedPath = path;
-		float nextX = x;
-		for(int i : FeatureArray){
-			switch(i){
-			case 0: nextX = landingPad(sharedPath, nextX);
-				break;
-			case 1: nextX = InversePyramidFeature(sharedPath, nextX);
-				break;
-			case 2: nextX = JaggedCliffFeature(sharedPath, nextX);
-				break;
-			case 3: nextX = TreeFeature(sharedPath, nextX);
-				break;	
-			case 4: nextX = SpireFeature(sharedPath, nextX);
-				break;
-			case 5: nextX = PyramidFeature(sharedPath, nextX);
-				break;
+		float nextX = 0;
+		if(id.equals("intList")){
+			for(int i : intList){
+				switch(i){
+				case 0: nextX = landingPad(sharedPath, nextX);
+					break;
+				case 1: nextX = InversePyramidFeature(sharedPath, nextX);
+					break;
+				case 2: nextX = JaggedCliffFeature(sharedPath, nextX);
+					break;
+				case 3: nextX = TreeFeature(sharedPath, nextX);
+					break;	
+				case 4: nextX = SpireFeature(sharedPath, nextX);
+					break;
+				case 5: nextX = PyramidFeature(sharedPath, nextX);
+					break;
+				}
+			}
+		}
+		
+		else{
+			for(int i : FeatureArray){
+				switch(i){
+				case 0: nextX = landingPad(sharedPath, nextX);
+					break;
+				case 1: nextX = InversePyramidFeature(sharedPath, nextX);
+					break;
+				case 2: nextX = JaggedCliffFeature(sharedPath, nextX);
+					break;
+				case 3: nextX = TreeFeature(sharedPath, nextX);
+					break;	
+				case 4: nextX = SpireFeature(sharedPath, nextX);
+					break;
+				case 5: nextX = PyramidFeature(sharedPath, nextX);
+					break;
+				}
 			}
 		}
 		return nextX;		
 	}
-	
-	private void PsuedoRandomSort(){
-		
-		
-		boolean ChoosingNumbers = true;
-		boolean zeroAlreadyExists = false;
-		
-		//ArrayList<int> 
-		
-		
-		/*while(!mapped){
-			
-		}*/
-		
-		
-		
-		
-		while(ChoosingNumbers){			
-			for(int i = 0; i < FeatureArray.length; i++){
-				//Random selection of number between 0 and 6, then adds this number to the array
-				FeatureArray[i]  = random.nextInt(6);
-				
-				//Checks if 0 has been added to any position of the array
-				if(FeatureArray[i] == 0){
-					//Overwrites previous number with random number that isn't 0 with-in the range
-					if(zeroAlreadyExists){
-						FeatureArray[i]  = random.nextInt(5) + 1; 						
-					}
-					else{
-						zeroAlreadyExists = true;
-					}
-					//Checks if the last array position contains the value 0
-					//If 0 is in any other array position the while loop will end 
-					//0 is assigned the landing pad, and on smaller resolutions/screen sizes this isn't full visible
-					if(FeatureArray[4] == 0){
-						ChoosingNumbers = true;
-					}
-					else {
-						ChoosingNumbers = false;
-					}
-				}
-			}
-		}		
-	}
-	
-/*	//Chooses a number pseudo-randomly between 0 and 6
-	private int getRandomNumber(){
-		int randomInt = random.nextInt(6);		 
-		return randomInt;
-	}*/
 	
 
 	
