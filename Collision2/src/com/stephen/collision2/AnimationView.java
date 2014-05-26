@@ -2,6 +2,8 @@ package com.stephen.collision2;
 
 import java.util.ArrayList;
 import java.util.Random;
+import java.util.Timer;
+
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -18,6 +20,19 @@ import android.view.SurfaceView;
 
 public class AnimationView extends SurfaceView implements Runnable, SurfaceHolder.Callback {
 
+	final static float Gravity = 0.25f;
+	final static double TerminalVelocity = 15.0;
+	private float acceleration;
+	
+	private float speed;
+	
+	
+	private long startTime;
+	//private long currentTime;
+	
+	private int count;
+	
+	
 	private Thread animation = null;
 	private boolean running;
 	
@@ -27,7 +42,7 @@ public class AnimationView extends SurfaceView implements Runnable, SurfaceHolde
 	private Bitmap mars;
 	private BitmapShader marsShade;
 	//private Paint paint = new Paint();
-	private Paint marsBackground = new Paint();
+	private Paint marsBackground;// = new Paint();
 	
 	
 	//Needed for spaceship
@@ -60,7 +75,7 @@ public class AnimationView extends SurfaceView implements Runnable, SurfaceHolde
 		//animation = null;
 		
 		//Needed for ground
-		//marsBackground = new Paint();
+		marsBackground = new Paint();
 		mars = BitmapFactory.decodeResource(getResources(), R.drawable.mars);
 		marsShade = (new BitmapShader(mars, Shader.TileMode.REPEAT, Shader.TileMode.REPEAT));
 		marsBackground.setShader(marsShade);
@@ -86,6 +101,10 @@ public class AnimationView extends SurfaceView implements Runnable, SurfaceHolde
         
 		
 		mapped = false;
+		speed = 0;
+		count = 0;
+		acceleration = 0;
+		startTime = System.nanoTime();
 		getHolder().addCallback(this);
 		
 
@@ -97,7 +116,7 @@ public class AnimationView extends SurfaceView implements Runnable, SurfaceHolde
 		//animation = null;
 		
 		//Needed for ground
-		//marsBackground = new Paint();
+		marsBackground = new Paint();
 		mars = BitmapFactory.decodeResource(getResources(), R.drawable.mars);
 		marsShade = (new BitmapShader(mars, Shader.TileMode.REPEAT, Shader.TileMode.REPEAT));
 		marsBackground.setShader(marsShade);
@@ -118,6 +137,10 @@ public class AnimationView extends SurfaceView implements Runnable, SurfaceHolde
 		arrayInitialised = false;
 		
 		mapped = false;
+		
+		acceleration = 0;
+		speed = 0;
+		startTime = System.nanoTime();
 		getHolder().addCallback(this);
 		
 	}
@@ -162,9 +185,9 @@ public class AnimationView extends SurfaceView implements Runnable, SurfaceHolde
 		shipXPos =(int) width / 2;
 		int gravity = 0;
 		int verticalThrust = 0;
-		
+		int time = 0;
 		GroundGeneration();
-		
+
 		while (running) {
 			Canvas canvas = null;
 			SurfaceHolder holder = getHolder();
@@ -172,7 +195,10 @@ public class AnimationView extends SurfaceView implements Runnable, SurfaceHolde
 			synchronized (holder) {
 				initalxPos.clear();
 				initalyPos.clear();
-				
+				count++;
+				if(count % 15 == 0){
+					time++;
+				}
 				if(rightThrusterFiring){
 					shipXPos-=6;
 				}
@@ -181,6 +207,9 @@ public class AnimationView extends SurfaceView implements Runnable, SurfaceHolde
 				}
 				
 				if(mainRocketFiring){
+					count = 0;
+					speed = 0;
+					startTime = System.nanoTime();
 					if(verticalThrust <= 1){
 						verticalThrust += 1;
 					}
@@ -190,11 +219,21 @@ public class AnimationView extends SurfaceView implements Runnable, SurfaceHolde
 					}
 				}else{
 					verticalThrust = 0;
-					
-					if( gravity < 3) {					
-						gravity++;
+					int elapsedSeconds = (int) ((System.nanoTime() - startTime) / 1000000000.0);
+					if(speed < TerminalVelocity){
+						if ( elapsedSeconds % 5 == 0){
+							speed += Gravity;
+						}
 					}
-					shipYPos += gravity;
+					
+					/*if( acceleration < TerminalVelocity) {
+						//long elapsedTime = System.nanoTime() - startTime;
+						//double seconds = elapsedTime /  1000000000.0;
+						if((time % 15) == 0){
+							acceleration += Gravity;
+						}
+					}*/
+					shipYPos += (int) speed;
 				}
 				
 				canvas = holder.lockCanvas();
@@ -246,10 +285,32 @@ public class AnimationView extends SurfaceView implements Runnable, SurfaceHolde
 					
 					shipYPos = 0;
 				}
+				
 			}
 			holder.unlockCanvasAndPost(canvas);
 		}
 	}
+	
+	public void pause(){
+		running = false;
+		while(running){
+			try{
+				animation.join();
+			}catch(InterruptedException e){
+				e.printStackTrace();
+			}
+			break;
+		}
+		animation = null;
+	}
+	
+	public void resume(){
+		running = true;
+		animation = new Thread(this);
+		animation.start();
+	}
+	
+	
 	
 	ArrayList<Crash> crashList = new ArrayList<Crash>();
 	

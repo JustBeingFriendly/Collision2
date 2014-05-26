@@ -91,4 +91,18 @@ public class MainActivity extends Activity {
 		
 		
 	}
+	@Override
+	protected void onResume(){
+		super.onResume();
+		av.resume();
+		
+	}
+	
+	@Override
+	protected void onPause(){
+		super.onPause();
+		av.pause();
+	}
+	
+	
 }
